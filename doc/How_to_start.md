@@ -59,3 +59,43 @@ npm -version
 
  ### 启动后端服务
  - 选中 src\main\java\com\getjobs\GetJobsApplication.java 点击run java
+
+
+## 其他
+### VS Code 插件 SQLite Viewer
+可以安装 SQLite Viewer 插件看数据库里的内容
+
+## 高级功能
+
+### BOSS调试模式（仅收集职位信息，不投递）
+
+BOSS平台支持调试模式，开启后只会收集职位信息并保存到数据库，不会实际投递简历。
+
+#### 适用场景
+- 职位分析和筛选：先收集数据再决定是否投递
+- 测试配置效果：验证关键词、过滤条件是否生效
+- 数据备份和调研：保存职位信息用于后续分析
+- 避免误投：确保配置正确后再正式投递
+
+#### 开启方法
+在 `boss_config` 表中设置 `debugger` 字段为 `1`：
+- 通过前端配置界面：在BOSS配置页面找到"调试模式"选项并开启（暂时没有界面）
+- 或直接修改数据库：`UPDATE boss_config SET debugger = 1 WHERE id = 1`
+
+#### 功能特点
+1. **完整数据收集**：会遍历所有匹配的职位，解析职位详情并保存到 `boss_data` 表
+2. **过滤规则生效**：黑名单、薪资过滤、HR活跃状态过滤等规则都会正常执行
+3. **状态标记清晰**：职位会被标记为"未投递"或"已过滤"状态
+4. **支持后续分析**：可在前端查看职位分析报表，支持按状态、薪资、公司等维度筛选
+
+#### 实现原理
+在 [`Boss.java`](src/main/java/com/getjobs/worker/boss/Boss.java:610-612) 中实现：
+```java
+// 调试模式：仅遍历不投递
+if (Boolean.TRUE.equals(config.getDebugger())) {
+    log.info("调试模式：仅遍历岗位，不投递 | 公司：{} | 岗位：{}", job.getCompanyName(), job.getJobName());
+    return;
+}
+```
+
+开启调试模式后，系统会执行完整的职位搜索和过滤逻辑，但在实际投递前会跳过投递步骤，确保只收集数据不发送简历。

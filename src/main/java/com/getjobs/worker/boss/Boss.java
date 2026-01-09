@@ -99,6 +99,8 @@ public class Boss {
                 progressCallback.accept("用户取消投递", 0, 0);
                 break;
             }
+            // 城市之间添加间隔，避免频繁切换城市
+            PlaywrightUtil.sleep(2);
         }
         return resultList.size();
     }
@@ -223,11 +225,13 @@ public class Boss {
                     .setTimeout(15_000));
             // 等待列表容器出现，确保页面完成首屏渲染
             page.waitForSelector("//ul[contains(@class, 'rec-job-list')]", new Page.WaitForSelectorOptions().setTimeout(60_000));
+            // 页面加载完成后增加额外等待，确保完全渲染
+            PlaywrightUtil.sleep(2);
 
             // 1. 基于 footer 出现滚动到底，确保加载全部岗位
             int lastCount = -1;
             int stableTries = 0;
-            for (int i = 0; i < 5000; i++) { // 最多尝试约120次，避免死循环
+            for (int i = 0; i < 100; i++) { // 减少滚动次数，避免过于频繁
                 // 停止检查：滚动加载过程中也要及时响应
                 if (shouldStopCallback != null && Boolean.TRUE.equals(shouldStopCallback.get())) {
                     progressCallback.accept("用户取消投递", 0, 0);
@@ -238,7 +242,9 @@ public class Boss {
                     break; // 到达页面底部
                 }
                 // 按视口高度的90%渐进滚动，触发懒加载
-                page.evaluate("() => window.scrollBy(0, Math.floor(window.innerHeight * 1.5))");
+                page.evaluate("() => window.scrollBy(0, Math.floor(window.innerHeight * 0.8))");  // 减少滚动距离
+                // 大幅增加滚动间隔，避免频繁请求
+                PlaywrightUtil.sleep(3); 
 
                 // 获取卡片数量变化，判断是否需要强制触底
                 Locator cardsProbe = page.locator("//ul[contains(@class, 'rec-job-list')]//li[contains(@class, 'job-card-box')]");
@@ -250,9 +256,10 @@ public class Boss {
                 }
                 lastCount = currentCount;
 
-                if (stableTries >= 3) { // 连续多次无新增，则强制触底一次
+                if (stableTries >= 2) { // 减少稳定尝试次数，提前触底
                     page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)");
-                    // 触底不再等待，继续检测 footer 出现
+                    PlaywrightUtil.sleep(3);  // 触底后等待15秒
+                    break;  // 强制触底后退出循环
                 }
             }
             // 统计最终岗位数量
@@ -273,6 +280,11 @@ public class Boss {
                 if (shouldStopCallback != null && Boolean.TRUE.equals(shouldStopCallback.get())) {
                     progressCallback.accept("用户取消投递", i, count);
                     return;
+                }
+
+                // 在点击每个职位前增加长间隔，避免频繁点击
+                if (i > 0) {
+                    PlaywrightUtil.sleep(8); 
                 }
 
                 // 重新获取卡片，避免元素过期
@@ -303,7 +315,7 @@ public class Boss {
                     }
                 } catch (Throwable ignore) {
                 }
-                PlaywrightUtil.sleep(1);
+                PlaywrightUtil.sleep(3);  // 点击后等待，确保响应完成
 
                 // 统一从请求返回的 JSON 中获取数据并做过滤
                 String jobName = null;
@@ -628,12 +640,12 @@ public class Boss {
         // 2. 在新窗口打开详情页
         Page detailPage = page.context().newPage();
         detailPage.navigate(detailUrl);
-        PlaywrightUtil.sleep(1);
+        PlaywrightUtil.sleep(5);  // 打开详情页后等待
 
         // 3. 查找"立即沟通"按钮
         Locator chatBtn = detailPage.locator("a.btn-startchat, a.op-btn-chat");
         boolean foundChatBtn = false;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 3; i++) {  // 减少重试次数
             if (shouldStopCallback != null && Boolean.TRUE.equals(shouldStopCallback.get())) {
                 log.info("停止指令已触发，结束查找聊天按钮 | 公司：{} | 岗位：{}", job.getCompanyName(), job.getJobName());
                 try { detailPage.close(); } catch (Exception ignore) {}
@@ -643,7 +655,7 @@ public class Boss {
                 foundChatBtn = true;
                 break;
             }
-            PlaywrightUtil.sleep(1);
+            PlaywrightUtil.sleep(3);  // 每次等待
         }
         if (!foundChatBtn) {
             log.warn("未找到立即沟通按钮，跳过岗位: {}", job.getJobName());
@@ -655,12 +667,12 @@ public class Boss {
             return;
         }
         chatBtn.first().click();
-        PlaywrightUtil.sleep(1);
+        PlaywrightUtil.sleep(5);  // 点击聊天按钮后等待
 
         // 4. 等待聊天输入框
         Locator inputLocator = detailPage.locator("div#chat-input.chat-input[contenteditable='true'], textarea.input-area");
         boolean inputReady = false;
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 5; i++) {  // 减少重试次数
             if (shouldStopCallback != null && Boolean.TRUE.equals(shouldStopCallback.get())) {
                 log.info("停止指令已触发，结束等待聊天输入框 | 公司：{} | 岗位：{}", job.getCompanyName(), job.getJobName());
                 try { detailPage.close(); } catch (Exception ignore) {}
@@ -670,7 +682,7 @@ public class Boss {
                 inputReady = true;
                 break;
             }
-            PlaywrightUtil.sleep(1);
+            PlaywrightUtil.sleep(3);  // 每次等待
         }
         if (!inputReady) {
             log.warn("聊天输入框未出现，跳过: {}", job.getJobName());
@@ -708,10 +720,11 @@ public class Boss {
         boolean sendSuccess = false;
         if (sendText.count() > 0) {
             sendText.first().click();
-            PlaywrightUtil.sleep(1);
+            PlaywrightUtil.sleep(3);  // 点击发送后等待
             sendSuccess = true;
             try {
                 detailPage.locator("i.icon-close").first().click();
+                PlaywrightUtil.sleep(2);  // 关闭弹窗后等待
             } catch (Exception e) {
                 log.error("发送文本小窗口关闭失败！");
             }
@@ -732,7 +745,7 @@ public class Boss {
             detailPage.close();
         } catch (Exception ignore) {
         }
-        PlaywrightUtil.sleep(1);
+        PlaywrightUtil.sleep(5);  // 关闭详情页前等待
 
         // 10. 更新数据库投递状态 & 成功投递加入结果
         if (sendSuccess) {
@@ -1153,3 +1166,4 @@ public class Boss {
     }
 
 }
+

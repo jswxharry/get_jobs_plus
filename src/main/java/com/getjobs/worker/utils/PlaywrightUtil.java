@@ -151,7 +151,9 @@ public class PlaywrightUtil {
      */
     public static void sleep(int seconds) {
         try {
-            TimeUnit.SECONDS.sleep(seconds);
+            log.info("等待 {} 秒...", seconds);
+            TimeUnit.SECONDS.sleep(seconds*5);//延长到原来的5倍
+            log.info("等待 {} 秒完成", seconds);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Sleep被中断", e);
