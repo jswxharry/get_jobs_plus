@@ -25,9 +25,13 @@ cd get_jobs_plus
 下载链接：https://www.oracle.com/java/technologies/downloads/#java21
 或者其他的21 TLS 版本
 
-### 下载Maven
-Maven 地址：https://maven.apache.org/download.cgi
-3.9 版本 安装可以基于官方说明：https://maven.apache.org/install.html
+### Gradle (推荐，项目使用Gradle构建)
+虽然项目提供了Maven配置，但推荐使用项目自带的Gradle构建工具。
+项目根目录已包含Gradle Wrapper (gradlew)，无需单独安装Gradle。
+
+如果需要单独安装Gradle：
+- 下载地址：https://gradle.org/releases/
+- 选择最新稳定版 (如 8.5+) 
 
 ### 下载 VS Code
 下载链接：https://code.visualstudio.com/
@@ -42,13 +46,20 @@ node --version
 npm -version
 ```
 
+### Playwright浏览器自动化库
+项目使用Playwright进行浏览器自动化操作，无需手动安装ChromeDriver。
+系统会根据需要自动下载对应浏览器驱动。
+
+**重要**：首次运行项目时，Playwright会自动下载Chromium浏览器，
+网络连接要求：需要能够访问Google相关服务（建议关闭代理软件或配置直连）
+
 ## 用 VS Code 启动项目
  - 用VS Code 打开项目目录
  - 第一次配置应该会提示你安装各种Java插件配置，跟着走就行，也可以看下提示的使用教程
- - 正常的话会自动经行依赖下载，等它完成
+ - 正常的话会自动进行依赖下载，等它完成
  
  ### 启动前端配置界面
- 在Terminal tab 里启动一个新的command promt
+ 在Terminal tab 里启动一个新的command prompt
  安装依赖（install)
  启动环境（run dev)
  ```
@@ -60,6 +71,22 @@ npm -version
  ### 启动后端服务
  - 选中 src\main\java\com\getjobs\GetJobsApplication.java 点击run java
 
+### 数据库初始化说明
+项目使用SQLite作为数据库，首次运行时会自动创建以下数据库文件：
+- `db/get_jobs.db` - 主数据库，存储配置和投递记录
+- `db/boss_data.db` - Boss直聘数据表
+- `db/zhilian_data.db` - 智联招聘数据表
+- `db/liepin_data.db` - 猎聘数据表
+- `db/job51_data.db` - 前程无忧数据表
+
+**重要**：首次启动时，系统会自动创建所需的数据表结构，
+请确保项目根目录下的 `db` 文件夹具有读写权限。
+
+### Playwright浏览器驱动配置
+首次运行项目时，Playwright会自动下载所需的浏览器驱动：
+- Chromium浏览器（约150-200MB）
+- 如果下载失败，可以尝试使用国内镜像或检查网络连接
+- 浏览器驱动会下载到系统的临时目录，首次启动会稍慢
 
 ## 其他
 ### VS Code 插件 SQLite Viewer
